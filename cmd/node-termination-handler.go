@@ -308,6 +308,8 @@ func drainOrCordonIfNecessary(interruptionEventStore *interruptioneventstore.Sto
 		runPreDrainTask(node, nodeName, drainEvent, metrics, recorder)
 	}
 
+	removeFromExternalLoadBalancers(node, nodeName, recorder)
+	
 	if nthConfig.CordonOnly || (drainEvent.IsRebalanceRecommendation() && !nthConfig.EnableRebalanceDraining) {
 		cordonNode(node, nodeName, drainEvent, metrics, recorder)
 	} else {
@@ -379,6 +381,15 @@ func cordonAndDrainNode(node node.Node, nodeName string, metrics observability.M
 		log.Info().Str("node_name", nodeName).Msg("Node successfully cordoned and drained")
 		metrics.NodeActionsInc("cordon-and-drain", nodeName, err)
 		recorder.Emit(nodeName, observability.Normal, observability.CordonAndDrainReason, observability.CordonAndDrainMsg)
+	}
+}
+
+func removeFromExternalLoadBalancers(node node.Node, nodeName string, recorder observability.K8sEventRecorder) {
+	err := node.RemoveFromExternalLoadBalancers(nodeName)
+	if err != nil {
+		// TODO
+	} else {
+		// TODO
 	}
 }
 

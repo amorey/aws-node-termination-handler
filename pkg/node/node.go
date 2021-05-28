@@ -46,6 +46,13 @@ const (
 )
 
 const (
+	// ExcludeFromELBLabelKey is a k8s node label that triggers removal from external load balancers
+	ExcludeFromELBsLabelKey = "node.kubernetes.io/exclude-from-external-load-balancers"
+	// ExcludeFromELBLabelVal is the node label value used by NTH
+	ExcludeFromELBsLabelVal = "aws-node-termination-handler/RemoveAfterReboot"
+)
+
+const (
 	// SpotInterruptionTaint is a taint used to make spot instance unschedulable
 	SpotInterruptionTaint = "aws-node-termination-handler/spot-itn"
 	// ScheduledMaintenanceTaint is a taint used to make spot instance unschedulable
@@ -210,6 +217,52 @@ func (n Node) MarkForUncordonAfterReboot(nodeName string) error {
 		n.removeLabel(nodeName, ActionLabelKey)
 		return fmt.Errorf("Unable to label node with action time for uncordon after system-reboot: %w", err)
 	}
+	return nil
+}
+
+// RemoveFromExternalLoadBalancers will add an "exclude-from-external-load-balancers" label to the node
+func (n Node) RemoveFromExternalLoadBalancers(nodeName string) error {
+	labels, err := n.GetNodeLabels(nodeName)
+	if err != nil {
+		return err
+	}
+
+	_, ok := labels[ExcludeFromELBsLabelKey]
+	
+	// return if label exists already
+	if ok {
+		return nil
+	}
+
+	// add label
+	err = n.addLabel(nodeName, ExcludeFromELBsLabelKey, ExcludeFromELBsLabelVal)
+	if err != nil {
+		return fmt.Errorf("Unable to label node with %s=%s: %w", ExcludeFromELBsLabelKey, ExcludeFromELBsLabelVal, err)
+	}
+	
+	return nil
+}
+
+// AddToExternalLoadBalancers will remove the "exclude-from-external-load-balancers" label added by NTH
+func (n Node) AddToExternalLoadBalancers(nodeName string) error {
+	labels, err := n.GetNodeLabels(nodeName)
+	if err != nil {
+		return err
+	}
+
+	val, ok := labels[ExcludeFromELBsLabelKey]
+
+	// return if label doesn't exist
+	if !ok || val != ExcludeFromELBsLabelVal {
+		return nil
+	}
+
+	// remove label
+	err = n.removeLabel(nodeName, ExcludeFromELBsLabelKey)
+	if err != nil {
+		return fmt.Errorf("Unable to remove %s label from node: %w", ExcludeFromELBsLabelKey, err)
+	}
+	
 	return nil
 }
 

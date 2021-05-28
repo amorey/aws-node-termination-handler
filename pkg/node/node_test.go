@@ -97,6 +97,12 @@ func TestDryRun(t *testing.T) {
 	err = tNode.MarkForUncordonAfterReboot(nodeName)
 	h.Ok(t, err)
 
+	err = tNode.RemoveFromExternalLoadBalancers(nodeName)
+	h.Ok(t, err)
+
+	err = tNode.AddToExternalLoadBalancers(nodeName)
+	h.Ok(t, err)
+	
 	_, err = tNode.IsLabeledWithAction(nodeName)
 	h.Ok(t, err)
 
@@ -238,6 +244,44 @@ func TestMarkForUncordonAfterRebootAddActionLabelFailure(t *testing.T) {
 	tNode := getNode(t, getDrainHelper(fake.NewSimpleClientset()))
 	err := tNode.MarkForUncordonAfterReboot(nodeName)
 	h.Assert(t, err != nil, "Failed to return error on MarkForUncordonAfterReboot failing to add action Label")
+}
+
+func TestRemoveFromExternalLoadBalancersSuccess(t *testing.T) {
+	resetFlagsForTest()
+
+	client := fake.NewSimpleClientset()
+	client.CoreV1().Nodes().Create(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}})
+
+	tNode := getNode(t, getDrainHelper(client))
+	err := tNode.RemoveFromExternalLoadBalancers(nodeName)
+	h.Ok(t, err)
+}
+
+func TestAddToExternalLoadBalancersSuccess(t *testing.T) {
+	resetFlagsForTest()
+
+	client := fake.NewSimpleClientset()
+	client.CoreV1().Nodes().Create(&v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nodeName,
+			Labels: map[string]string{"node.kubernetes.io/exclude-from-external-load-balancers": "aws-node-termination-handler/RemoveAfterReboot"},
+		},
+	})
+
+	tNode := getNode(t, getDrainHelper(client))
+	err := tNode.AddToExternalLoadBalancers(nodeName)
+	h.Ok(t, err)
+}
+
+func TestAddToExternalLoadBalancersFailure(t *testing.T) {
+	resetFlagsForTest()
+
+	client := fake.NewSimpleClientset()
+        client.CoreV1().Nodes().Create(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}})
+
+	tNode := getNode(t, getDrainHelper(client))
+	err := tNode.AddToExternalLoadBalancers(nodeName)
+	h.Assert(t, err != nil, "Failed to return error on AddToExternalLoadBalancers failing to remove label")
 }
 
 func TestFetchPodsNameList(t *testing.T) {
