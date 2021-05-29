@@ -308,7 +308,7 @@ func drainOrCordonIfNecessary(interruptionEventStore *interruptioneventstore.Sto
 		runPreDrainTask(node, nodeName, drainEvent, metrics, recorder)
 	}
 
-	removeFromExternalLoadBalancers(node, nodeName, recorder)
+	markForExcludeFromELBs(node, nodeName, metrics, recorder)
 	
 	if nthConfig.CordonOnly || (drainEvent.IsRebalanceRecommendation() && !nthConfig.EnableRebalanceDraining) {
 		cordonNode(node, nodeName, drainEvent, metrics, recorder)
@@ -324,7 +324,6 @@ func drainOrCordonIfNecessary(interruptionEventStore *interruptioneventstore.Sto
 		runPostDrainTask(node, nodeName, drainEvent, metrics, recorder)
 	}
 	<-interruptionEventStore.Workers
-
 }
 
 func runPreDrainTask(node node.Node, nodeName string, drainEvent *monitor.InterruptionEvent, metrics observability.Metrics, recorder observability.K8sEventRecorder) {
@@ -384,12 +383,20 @@ func cordonAndDrainNode(node node.Node, nodeName string, metrics observability.M
 	}
 }
 
-func removeFromExternalLoadBalancers(node node.Node, nodeName string, recorder observability.K8sEventRecorder) {
-	err := node.RemoveFromExternalLoadBalancers(nodeName)
+func markForExcludeFromELBs(node node.Node, nodeName string, metrics observability.Metrics, recorder observability.K8sEventRecorder) {
+	err := node.MarkForExcludeFromELBs(nodeName)
 	if err != nil {
-		// TODO
+		if errors.IsNotFound(err) {
+			log.Err(err).Msgf("node '%s' not found in the cluster", nodeName)
+		} else {
+			log.Err(err).Msg("There was a problem while trying to mark node for removal from external load balancers")
+			metrics.NodeActionsInc("exclude-from-elbs", nodeName, err)
+			recorder.Emit(nodeName, observability.Warning, observability.ExcludeFromELBsErrReason, observability.ExcludeFromELBsErrMsgFmt, err.Error())
+		}
 	} else {
-		// TODO
+		log.Info().Str("node_name", nodeName).Msg("Node successfully marked for removal from external load balancers")
+		metrics.NodeActionsInc("exclude-from-elbs", nodeName, err)
+		recorder.Emit(nodeName,  observability.Normal, observability.ExcludeFromELBsReason, observability.ExcludeFromELBsMsg)
 	}
 }
 

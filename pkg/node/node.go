@@ -49,7 +49,7 @@ const (
 	// ExcludeFromELBLabelKey is a k8s node label that triggers removal from external load balancers
 	ExcludeFromELBsLabelKey = "node.kubernetes.io/exclude-from-external-load-balancers"
 	// ExcludeFromELBLabelVal is the node label value used by NTH
-	ExcludeFromELBsLabelVal = "aws-node-termination-handler/RemoveAfterReboot"
+	ExcludeFromELBsLabelRebootVal = "aws-node-termination-handler/RemoveAfterReboot"
 )
 
 const (
@@ -220,8 +220,8 @@ func (n Node) MarkForUncordonAfterReboot(nodeName string) error {
 	return nil
 }
 
-// RemoveFromExternalLoadBalancers will add an "exclude-from-external-load-balancers" label to the node
-func (n Node) RemoveFromExternalLoadBalancers(nodeName string) error {
+// MarkForExcludeFromELBs will add an "exclude-from-external-load-balancers" label to the node
+func (n Node) MarkForExcludeFromELBs(nodeName string) error {
 	labels, err := n.GetNodeLabels(nodeName)
 	if err != nil {
 		return err
@@ -229,40 +229,39 @@ func (n Node) RemoveFromExternalLoadBalancers(nodeName string) error {
 
 	_, ok := labels[ExcludeFromELBsLabelKey]
 	
-	// return if label exists already
+	// return if label key exists already
 	if ok {
 		return nil
 	}
 
 	// add label
-	err = n.addLabel(nodeName, ExcludeFromELBsLabelKey, ExcludeFromELBsLabelVal)
+	err = n.addLabel(nodeName, ExcludeFromELBsLabelKey, ExcludeFromELBsLabelRebootVal)
 	if err != nil {
-		return fmt.Errorf("Unable to label node with %s=%s: %w", ExcludeFromELBsLabelKey, ExcludeFromELBsLabelVal, err)
+		return fmt.Errorf("Unable to label node with %s=%s: %w", ExcludeFromELBsLabelKey, ExcludeFromELBsLabelRebootVal, err)
 	}
 	
 	return nil
 }
 
-// AddToExternalLoadBalancers will remove the "exclude-from-external-load-balancers" label added by NTH
-func (n Node) AddToExternalLoadBalancers(nodeName string) error {
+// RemoveExcludeFromELBsLabel will remove the "exclude-from-external-load-balancers" label/key added by NTH
+func (n Node) RemoveExcludeFromELBsLabel(nodeName string) error {
 	labels, err := n.GetNodeLabels(nodeName)
 	if err != nil {
 		return err
-	}
-
+	}	
 	val, ok := labels[ExcludeFromELBsLabelKey]
-
-	// return if label doesn't exist
-	if !ok || val != ExcludeFromELBsLabelVal {
+	if !ok {
+		log.Debug().Msg("No action: exclude-from-external-load-balancers label not present on node.")
 		return nil
 	}
-
-	// remove label
+	if val != ExcludeFromELBsLabelRebootVal {
+		log.Debug().Msg("No action: exclude-from-external-load-balancers label value is not from NTH.")
+		return nil
+	}
 	err = n.removeLabel(nodeName, ExcludeFromELBsLabelKey)
 	if err != nil {
 		return fmt.Errorf("Unable to remove %s label from node: %w", ExcludeFromELBsLabelKey, err)
 	}
-	
 	return nil
 }
 
@@ -516,6 +515,11 @@ func (n Node) UncordonIfRebooted(nodeName string) error {
 			return err
 		}
 
+		err = n.RemoveExcludeFromELBsLabel(nodeName)
+		if err != nil {
+			return err
+		}
+		
 		log.Info().Msgf("Successfully completed action %s.", UncordonAfterRebootLabelVal)
 	default:
 		log.Debug().Msg("There are no label actions to handle.")

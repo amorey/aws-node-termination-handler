@@ -32,30 +32,34 @@ import (
 
 // Kubernetes event types, reasons and messages
 const (
-	Normal                  = corev1.EventTypeNormal
-	Warning                 = corev1.EventTypeWarning
-	MonitorErrReason        = "MonitorError"
-	MonitorErrMsgFmt        = "There was a problem monitoring for events in monitor '%s'"
-	UncordonErrReason       = "UncordonError"
-	UncordonErrMsgFmt       = "There was a problem while trying to uncordon the node: %s"
-	UncordonReason          = "Uncordon"
-	UncordonMsg             = "Node successfully uncordoned"
-	PreDrainErrReason       = "PreDrainError"
-	PreDrainErrMsgFmt       = "There was a problem executing the pre-drain task: %s"
-	PreDrainReason          = "PreDrain"
-	PreDrainMsg             = "Pre-drain task successfully executed"
-	CordonErrReason         = "CordonError"
-	CordonErrMsgFmt         = "There was a problem while trying to cordon the node: %s"
-	CordonReason            = "Cordon"
-	CordonMsg               = "Node successfully cordoned"
-	CordonAndDrainErrReason = "CordonAndDrainError"
-	CordonAndDrainErrMsgFmt = "There was a problem while trying to cordon and drain the node: %s"
-	CordonAndDrainReason    = "CordonAndDrain"
-	CordonAndDrainMsg       = "Node successfully cordoned and drained"
-	PostDrainErrReason      = "PostDrainError"
-	PostDrainErrMsgFmt      = "There was a problem executing the post-drain task: %s"
-	PostDrainReason         = "PostDrain"
-	PostDrainMsg            = "Post-drain task successfully executed"
+	Normal                   = corev1.EventTypeNormal
+	Warning                  = corev1.EventTypeWarning
+	MonitorErrReason         = "MonitorError"
+	MonitorErrMsgFmt         = "There was a problem monitoring for events in monitor '%s'"
+	UncordonErrReason        = "UncordonError"
+	UncordonErrMsgFmt        = "There was a problem while trying to uncordon the node: %s"
+	UncordonReason           = "Uncordon"
+	UncordonMsg              = "Node successfully uncordoned"
+	PreDrainErrReason        = "PreDrainError"
+	PreDrainErrMsgFmt        = "There was a problem executing the pre-drain task: %s"
+	PreDrainReason           = "PreDrain"
+	PreDrainMsg              = "Pre-drain task successfully executed"
+	CordonErrReason          = "CordonError"
+	CordonErrMsgFmt          = "There was a problem while trying to cordon the node: %s"
+	CordonReason             = "Cordon"
+	CordonMsg                = "Node successfully cordoned"
+	CordonAndDrainErrReason  = "CordonAndDrainError"
+	CordonAndDrainErrMsgFmt  = "There was a problem while trying to cordon and drain the node: %s"
+	CordonAndDrainReason     = "CordonAndDrain"
+	CordonAndDrainMsg        = "Node successfully cordoned and drained"
+	PostDrainErrReason       = "PostDrainError"
+	PostDrainErrMsgFmt       = "There was a problem executing the post-drain task: %s"
+	PostDrainReason          = "PostDrain"
+	PostDrainMsg             = "Post-drain task successfully executed"
+	ExcludeFromELBsErrReason = "ExcludeFromELBsError"
+	ExcludeFromELBsErrMsgFmt = "There was a problem trying to mark node for exclusion from ELBs: %s"
+	ExcludeFromELBsReason    = "ExcludeFromELBs"
+	ExcludeFromELBsMsg       = "Node successfully marked for exclusion from ELBs"
 )
 
 // Interruption event reasons

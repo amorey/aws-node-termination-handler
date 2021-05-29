@@ -97,12 +97,9 @@ func TestDryRun(t *testing.T) {
 	err = tNode.MarkForUncordonAfterReboot(nodeName)
 	h.Ok(t, err)
 
-	err = tNode.RemoveFromExternalLoadBalancers(nodeName)
+	err = tNode.MarkForExcludeFromELBs(nodeName)
 	h.Ok(t, err)
 
-	err = tNode.AddToExternalLoadBalancers(nodeName)
-	h.Ok(t, err)
-	
 	_, err = tNode.IsLabeledWithAction(nodeName)
 	h.Ok(t, err)
 
@@ -246,42 +243,93 @@ func TestMarkForUncordonAfterRebootAddActionLabelFailure(t *testing.T) {
 	h.Assert(t, err != nil, "Failed to return error on MarkForUncordonAfterReboot failing to add action Label")
 }
 
-func TestRemoveFromExternalLoadBalancersSuccess(t *testing.T) {
-	resetFlagsForTest()
-
-	client := fake.NewSimpleClientset()
-	client.CoreV1().Nodes().Create(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}})
-
-	tNode := getNode(t, getDrainHelper(client))
-	err := tNode.RemoveFromExternalLoadBalancers(nodeName)
-	h.Ok(t, err)
-}
-
-func TestAddToExternalLoadBalancersSuccess(t *testing.T) {
-	resetFlagsForTest()
-
-	client := fake.NewSimpleClientset()
-	client.CoreV1().Nodes().Create(&v1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: nodeName,
-			Labels: map[string]string{"node.kubernetes.io/exclude-from-external-load-balancers": "aws-node-termination-handler/RemoveAfterReboot"},
+func TestMarkForExcludeFromELBs(t *testing.T) {
+	tests := []struct {
+		name     string
+		labelKey string
+		labelVal string
+	}{
+		{
+			"Label key not present",
+			"",
+			"",
 		},
-	})
+		{
+			"Label key with no value present",
+			"node.kubernetes.io/exclude-from-external-load-balancers",
+			"",
+		},
+		{
+			"Label key and non-NTH value present",
+			"node.kubernetes.io/exclude-from-external-load-balancers",
+			"other-app",
+		},
+	}
 
-	tNode := getNode(t, getDrainHelper(client))
-	err := tNode.AddToExternalLoadBalancers(nodeName)
-	h.Ok(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetFlagsForTest()
+			
+			client := fake.NewSimpleClientset()
+			client.CoreV1().Nodes().Create(&v1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: nodeName,
+					Labels: map[string]string{tt.labelKey: tt.labelVal},
+				},
+			})
+			
+			tNode := getNode(t, getDrainHelper(client))
+			err := tNode.MarkForExcludeFromELBs(nodeName)
+			h.Ok(t, err)
+		})
+	}
 }
 
-func TestAddToExternalLoadBalancersFailure(t *testing.T) {
-	resetFlagsForTest()
+func TestRemoveExcludeFromELBsLabel(t *testing.T) {
+	tests := []struct {
+		name     string
+		labelKey string
+		labelVal string
+	}{
+		{
+			"Label key not present",
+			"",
+			"",
+		},
+		{
+			"Label key and NTH value present",
+			"node.kubernetes.io/exclude-from-external-load-balancers",
+			"aws-node-termination-handler/RemoveAfterReboot",
+		},
+		{
+			"Label key with no value present",
+			"node.kubernetes.io/exclude-from-external-load-balancers",
+			"",
+		},
+		{
+			"Label key and non-NTH value present",
+			"node.kubernetes.io/exclude-from-external-load-balancers",
+			"other-app",
+		},
+	}
 
-	client := fake.NewSimpleClientset()
-        client.CoreV1().Nodes().Create(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}})
-
-	tNode := getNode(t, getDrainHelper(client))
-	err := tNode.AddToExternalLoadBalancers(nodeName)
-	h.Assert(t, err != nil, "Failed to return error on AddToExternalLoadBalancers failing to remove label")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetFlagsForTest()
+			
+			client := fake.NewSimpleClientset()
+			client.CoreV1().Nodes().Create(&v1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: nodeName,
+					Labels: map[string]string{tt.labelKey: tt.labelVal},
+				},
+			})
+			
+			tNode := getNode(t, getDrainHelper(client))
+			err := tNode.RemoveExcludeFromELBsLabel(nodeName)
+			h.Ok(t, err)
+		})
+	}
 }
 
 func TestFetchPodsNameList(t *testing.T) {
