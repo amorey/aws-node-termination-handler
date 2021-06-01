@@ -49,7 +49,7 @@ const (
 	// ExcludeFromELBLabelKey is a k8s node label that triggers removal from external load balancers
 	ExcludeFromELBsLabelKey = "node.kubernetes.io/exclude-from-external-load-balancers"
 	// ExcludeFromELBLabelVal is the node label value used by NTH
-	ExcludeFromELBsLabelRebootVal = "aws-node-termination-handler/RemoveAfterReboot"
+	ExcludeFromELBsLabelRebootVal = "aws-node-termination-handler_RemoveAfterReboot"
 )
 
 const (
